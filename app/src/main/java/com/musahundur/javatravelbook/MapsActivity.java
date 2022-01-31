@@ -10,6 +10,7 @@ import androidx.fragment.app.FragmentActivity;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
@@ -34,6 +35,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     ActivityResultLauncher<String> permissionLauncher;
     LocationManager locationManager;
     LocationListener locationListener;
+    SharedPreferences sharedPreferences;
+    boolean info;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,6 +50,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
+        sharedPreferences = MapsActivity.this.getSharedPreferences("com.musahundur.javatravelbook", MODE_PRIVATE);
+        info= false;
+
         registerLauncher();
     }
 
@@ -58,7 +64,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         locationListener = new LocationListener() {
             @Override
             public void onLocationChanged(@NonNull Location location) {
-                System.out.println("location : " + location.toString());
+
+
+                info = sharedPreferences.getBoolean("info", false);
+                if (!info){
+                    LatLng userLocation = new LatLng(location.getLatitude(), location.getLongitude());
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(userLocation,16));
+                    sharedPreferences.edit().putBoolean("info",true).apply();
+                }
+
             }
         };
 
@@ -77,13 +91,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         }else{
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,0,0,locationListener);
+
+            Location lastLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            if (lastLocation != null){
+                LatLng lastUserLocation = new LatLng(lastLocation.getLatitude(),lastLocation.getLongitude());
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(lastUserLocation,16));
+            }
         }
-
-
-        //48.857549,2.2931139
-        LatLng eiffel = new LatLng(48.857549,2.2931139);
-        mMap.addMarker(new MarkerOptions().position(eiffel).title("Eiffel Tower"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(eiffel,16));
     }
 
     private void registerLauncher(){
@@ -95,6 +109,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     if (ContextCompat.checkSelfPermission(MapsActivity.this,Manifest.permission.ACCESS_FINE_LOCATION)== PackageManager.PERMISSION_GRANTED){
                         //permission granted
                         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,0,0,locationListener);
+
+                        Location lastLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                        if (lastLocation != null){
+                            LatLng lastUserLocation = new LatLng(lastLocation.getLatitude(),lastLocation.getLongitude());
+                            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(lastUserLocation,16));
+                        }
+                        mMap.setMyLocationEnabled(true);
                     }
 
 
