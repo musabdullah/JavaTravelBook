@@ -3,7 +3,10 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
-        <entry key="..\:/Users/Musa/AndroidStudioProjects/JavaTravelBook/app/src/main/res/layout/activity_maps.xml" value="0.25416666666666665" />
+        <entry key="..\:/Users/Musa/AndroidStudioProjects/JavaTravelBook/app/src/main/res/layout/activity_main.xml" value="0.4" />
+        <entry key="..\:/Users/Musa/AndroidStudioProjects/JavaTravelBook/app/src/main/res/layout/activity_maps.xml" value="0.4" />
+        <entry key="..\:/Users/Musa/AndroidStudioProjects/JavaTravelBook/app/src/main/res/layout/recycler_row.xml" value="0.536" />
+        <entry key="..\:/Users/Musa/AndroidStudioProjects/JavaTravelBook/app/src/main/res/menu/travel_menu.xml" value="0.4" />
       </map>
     </option>
   </component>
