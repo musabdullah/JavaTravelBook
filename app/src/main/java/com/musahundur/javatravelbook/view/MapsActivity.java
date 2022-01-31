@@ -52,6 +52,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     Double selectedLatitude;
     Double selectedLongitude;
     private CompositeDisposable compositeDisposable = new CompositeDisposable();
+    Place selectedPlace;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,6 +79,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         selectedLatitude = 0.0;
         selectedLongitude = 0.0;
 
+        binding.saveButton.setEnabled(false);
+
     }
 
     @Override
@@ -85,46 +88,67 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap = googleMap;
         mMap.setOnMapLongClickListener(this);
 
-        binding.saveButton.setEnabled(false);
+        Intent intent = getIntent();
+        String intentInfo = intent.getStringExtra("info");
 
-        locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
-        locationListener = new LocationListener() {
-            @Override
-            public void onLocationChanged(@NonNull Location location) {
+        if (intentInfo.equals("new")){
+            binding.saveButton.setVisibility(View.VISIBLE);
+            binding.deleteButton.setVisibility(View.GONE);
+
+            locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+            locationListener = new LocationListener() {
+                @Override
+                public void onLocationChanged(@NonNull Location location) {
 
 
-                info = sharedPreferences.getBoolean("info", false);
-                if (!info){
-                    LatLng userLocation = new LatLng(location.getLatitude(), location.getLongitude());
-                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(userLocation,16));
-                    sharedPreferences.edit().putBoolean("info",true).apply();
+                    info = sharedPreferences.getBoolean("info", false);
+                    if (!info){
+                        LatLng userLocation = new LatLng(location.getLatitude(), location.getLongitude());
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(userLocation,16));
+                        sharedPreferences.edit().putBoolean("info",true).apply();
+                    }
+
+                }
+            };
+
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)!= PackageManager.PERMISSION_GRANTED){
+                if (ActivityCompat.shouldShowRequestPermissionRationale(this,Manifest.permission.ACCESS_FINE_LOCATION)){
+                    Snackbar.make(binding.getRoot(),"Permission needed for maps",Snackbar.LENGTH_INDEFINITE).setAction("Give Permission", new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            //request permission
+                            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION);
+                        }
+                    }).show();
+                }else{
+                    //request permission
+                    permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION);
+                }
+            }else{
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,0,0,locationListener);
+
+                Location lastLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                if (lastLocation != null){
+                    LatLng lastUserLocation = new LatLng(lastLocation.getLatitude(),lastLocation.getLongitude());
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(lastUserLocation,16));
                 }
 
+                mMap.setMyLocationEnabled(true);
             }
-        };
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)!= PackageManager.PERMISSION_GRANTED){
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this,Manifest.permission.ACCESS_FINE_LOCATION)){
-                Snackbar.make(binding.getRoot(),"Permission needed for maps",Snackbar.LENGTH_INDEFINITE).setAction("Give Permission", new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        //request permission
-                        permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION);
-                    }
-                }).show();
-            }else{
-                //request permission
-                permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION);
-            }
         }else{
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,0,0,locationListener);
+            mMap.clear();
+            selectedPlace = (Place) intent.getSerializableExtra("place");
+            LatLng latLng = new LatLng(selectedPlace.latitude, selectedPlace.longitude);
+            mMap.addMarker(new MarkerOptions().position(latLng).title(selectedPlace.name));
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng,16));
 
-            Location lastLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-            if (lastLocation != null){
-                LatLng lastUserLocation = new LatLng(lastLocation.getLatitude(),lastLocation.getLongitude());
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(lastUserLocation,16));
-            }
+            binding.placeNameText.setText(selectedPlace.name);
+            binding.saveButton.setVisibility(View.GONE);
+            binding.deleteButton.setVisibility(View.VISIBLE);
+
         }
+
     }
 
     private void registerLauncher(){
@@ -142,7 +166,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             LatLng lastUserLocation = new LatLng(lastLocation.getLatitude(),lastLocation.getLongitude());
                             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(lastUserLocation,16));
                         }
-                        mMap.setMyLocationEnabled(true);
+
                     }
 
 
@@ -182,14 +206,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     public void delete (View view){
-        /*
-        compositeDisposable.add(placeDao.delete()
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(MapsActivity.this::handleResponse)
-        );
 
-         */
+        if (selectedPlace!= null){
+            compositeDisposable.add(placeDao.delete(selectedPlace)
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(MapsActivity.this::handleResponse)
+            );
+        }
+
     }
 
     @Override
